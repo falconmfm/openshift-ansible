@@ -59,7 +59,7 @@ def failed(result, msg_has=None):
     if msg_has is not None:
         assert 'msg' in result
         for term in msg_has:
-            assert term in result['msg']
+            assert term.lower() in result['msg'].lower()
     return result.get('failed', False)
 
 
@@ -67,6 +67,7 @@ def changed(result):
     return result.get('changed', False)
 
 
+# tests whether task is skipped, not individual checks
 def skipped(result):
     return result.get('skipped', False)
 
@@ -101,7 +102,20 @@ def test_action_plugin_skip_non_active_checks(plugin, task_vars, monkeypatch):
 
     result = plugin.run(tmp=None, task_vars=task_vars)
 
-    assert result['checks']['fake_check'] == {'skipped': True}
+    assert result['checks']['fake_check'] == dict(skipped=True, skipped_reason="Not active for this host")
+    assert not failed(result)
+    assert not changed(result)
+    assert not skipped(result)
+
+
+def test_action_plugin_skip_disabled_checks(plugin, task_vars, monkeypatch):
+    checks = [fake_check('fake_check', is_active=True)]
+    monkeypatch.setattr('openshift_checks.OpenShiftCheck.subclasses', classmethod(lambda cls: checks))
+
+    task_vars['openshift_disable_check'] = 'fake_check'
+    result = plugin.run(tmp=None, task_vars=task_vars)
+
+    assert result['checks']['fake_check'] == dict(skipped=True, skipped_reason="Disabled by user request")
     assert not failed(result)
     assert not changed(result)
     assert not skipped(result)
@@ -160,6 +174,16 @@ def test_action_plugin_run_check_exception(plugin, task_vars, monkeypatch):
 
     assert failed(result['checks']['fake_check'], msg_has=exception_msg)
     assert failed(result, msg_has=['failed'])
+    assert not changed(result)
+    assert not skipped(result)
+
+
+def test_action_plugin_resolve_checks_exception(plugin, task_vars, monkeypatch):
+    monkeypatch.setattr(plugin, 'load_known_checks', lambda: {})
+
+    result = plugin.run(tmp=None, task_vars=task_vars)
+
+    assert failed(result, msg_has=['unknown', 'name'])
     assert not changed(result)
     assert not skipped(result)
 

@@ -12,6 +12,12 @@
       traditional docker package install. Otherwise, comment out openshift_docker_options
       in your inventory file.
 
+- name: Ensure container-selinux is installed
+  package:
+    name: container-selinux
+    state: present
+  when: not openshift.common.is_atomic | bool
+
 # Used to pull and install the system container
 - name: Ensure atomic is installed
   package:
@@ -86,7 +92,7 @@
 
     - name: Use Fedora Registry for image when distribution is Fedora
       set_fact:
-        l_docker_image_prepend: "registry.fedoraproject.org"
+        l_docker_image_prepend: "registry.fedoraproject.org/f25"
       when: ansible_distribution == 'Fedora'
 
     # For https://github.com/openshift/openshift-ansible/pull/4049#discussion_r114478504
@@ -102,7 +108,7 @@
         l_docker_image: "{{ l_docker_image_prepend }}/{{ openshift.docker.service_name }}:latest"
 
 # NOTE: no_proxy added as a workaround until https://github.com/projectatomic/atomic/pull/999 is released
-- name: Pre-pull Container Enginer System Container image
+- name: Pre-pull Container Engine System Container image
   command: "atomic pull --storage ostree {{ l_docker_image }}"
   changed_when: false
   environment:
@@ -119,21 +125,19 @@
     path: "{{ docker_conf_dir }}"
     state: directory
 
-- name: Install Container Enginer System Container
+- name: Install Container Engine System Container
   oc_atomic_container:
     name: "{{ openshift.docker.service_name }}"
     image: "{{ l_docker_image }}"
     state: latest
-    values:
-      - "system-package=no"
 
 - name: Configure Container Engine Service File
   template:
     dest: "{{ container_engine_systemd_dir }}/custom.conf"
     src: systemcontainercustom.conf.j2
 
-# Set local versions of facts that must be in json format for daemon.json
-# NOTE: When jinja2.9+ is used the daemon.json file can move to using tojson
+# Set local versions of facts that must be in json format for container-daemon.json
+# NOTE: When jinja2.9+ is used the container-daemon.json file can move to using tojson
 - set_fact:
     l_docker_insecure_registries: "{{ docker_insecure_registries | default([]) | to_json }}"
     l_docker_log_options: "{{ docker_log_options | default({}) | to_json }}"
@@ -141,10 +145,12 @@
     l_docker_blocked_registries: "{{ docker_blocked_registries | default([]) | to_json }}"
     l_docker_selinux_enabled: "{{ docker_selinux_enabled | default(true) | to_json }}"
 
-# Configure container-engine using the daemon.json file
+# Configure container-engine using the container-daemon.json file
+# NOTE: daemon.json and container-daemon.json have been seperated to avoid
+#       collision.
 - name: Configure Container Engine
   template:
-    dest: "{{ docker_conf_dir }}/daemon.json"
+    dest: "{{ docker_conf_dir }}/container-daemon.json"
     src: daemon.json
 
 # Enable and start the container-engine service

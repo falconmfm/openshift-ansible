@@ -1078,10 +1078,6 @@ class OpenShiftCLI(object):
         elif self.namespace is not None and self.namespace.lower() not in ['none', 'emtpy']:  # E501
             cmds.extend(['-n', self.namespace])
 
-        rval = {}
-        results = ''
-        err = None
-
         if self.verbose:
             print(' '.join(cmds))
 
@@ -1091,34 +1087,26 @@ class OpenShiftCLI(object):
             returncode, stdout, stderr = 1, '', 'Failed to execute {}: {}'.format(subprocess.list2cmdline(cmds), ex)
 
         rval = {"returncode": returncode,
-                "results": results,
                 "cmd": ' '.join(cmds)}
 
-        if returncode == 0:
-            if output:
-                if output_type == 'json':
-                    try:
-                        rval['results'] = json.loads(stdout)
-                    except ValueError as verr:
-                        if "No JSON object could be decoded" in verr.args:
-                            err = verr.args
-                elif output_type == 'raw':
-                    rval['results'] = stdout
+        if output_type == 'json':
+            rval['results'] = {}
+            if output and stdout:
+                try:
+                    rval['results'] = json.loads(stdout)
+                except ValueError as verr:
+                    if "No JSON object could be decoded" in verr.args:
+                        rval['err'] = verr.args
+        elif output_type == 'raw':
+            rval['results'] = stdout if output else ''
 
-            if self.verbose:
-                print("STDOUT: {0}".format(stdout))
-                print("STDERR: {0}".format(stderr))
+        if self.verbose:
+            print("STDOUT: {0}".format(stdout))
+            print("STDERR: {0}".format(stderr))
 
-            if err:
-                rval.update({"err": err,
-                             "stderr": stderr,
-                             "stdout": stdout,
-                             "cmd": cmds})
-
-        else:
+        if 'err' in rval or returncode != 0:
             rval.update({"stderr": stderr,
-                         "stdout": stdout,
-                         "results": {}})
+                         "stdout": stdout})
 
         return rval
 
@@ -1386,7 +1374,6 @@ class Utils(object):  # pragma: no cover
             print('returning true')
         return True
 
-
 class OpenShiftCLIConfig(object):
     '''Generic Config'''
     def __init__(self, rname, namespace, kubeconfig, options):
@@ -1400,18 +1387,28 @@ class OpenShiftCLIConfig(object):
         ''' return config options '''
         return self._options
 
-    def to_option_list(self):
-        '''return all options as a string'''
-        return self.stringify()
+    def to_option_list(self, ascommalist=''):
+        '''return all options as a string
+           if ascommalist is set to the name of a key, and
+           the value of that key is a dict, format the dict
+           as a list of comma delimited key=value pairs'''
+        return self.stringify(ascommalist)
 
-    def stringify(self):
-        ''' return the options hash as cli params in a string '''
+    def stringify(self, ascommalist=''):
+        ''' return the options hash as cli params in a string
+            if ascommalist is set to the name of a key, and
+            the value of that key is a dict, format the dict
+            as a list of comma delimited key=value pairs '''
         rval = []
         for key in sorted(self.config_options.keys()):
             data = self.config_options[key]
             if data['include'] \
                and (data['value'] or isinstance(data['value'], int)):
-                rval.append('--{}={}'.format(key.replace('_', '-'), data['value']))
+                if key == ascommalist:
+                    val = ','.join(['{}={}'.format(kk, vv) for kk, vv in sorted(data['value'].items())])
+                else:
+                    val = data['value']
+                rval.append('--{}={}'.format(key.replace('_', '-'), val))
 
         return rval
 

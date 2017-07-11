@@ -62,6 +62,11 @@ spec:
         - name: dockerdaemoncfg
           mountPath: /etc/docker
           readOnly: true
+{% if openshift_logging_use_mux_client | bool %}
+        - name: muxcerts
+          mountPath: /etc/fluent/muxkeys
+          readOnly: true
+{% endif %}
         env:
         - name: "K8S_HOST_URL"
           value: "{{ openshift_logging_fluentd_master_url }}"
@@ -87,12 +92,26 @@ spec:
           value: "{{ openshift_logging_fluentd_ops_ca }}"
         - name: "ES_COPY"
           value: "false"
-        - name: "USE_JOURNAL"
-          value: "{{ openshift_logging_fluentd_use_journal | lower }}"
         - name: "JOURNAL_SOURCE"
           value: "{{ openshift_logging_fluentd_journal_source | default('') }}"
         - name: "JOURNAL_READ_FROM_HEAD"
           value: "{{ openshift_logging_fluentd_journal_read_from_head | lower }}"
+        - name: "BUFFER_QUEUE_LIMIT"
+          value: "{{ openshift_logging_fluentd_buffer_queue_limit }}"
+        - name: "BUFFER_SIZE_LIMIT"
+          value: "{{ openshift_logging_fluentd_buffer_size_limit }}"
+        - name: "FLUENTD_CPU_LIMIT"
+          valueFrom:
+            resourceFieldRef:
+              containerName: "{{ daemonset_container_name }}"
+              resource: limits.cpu
+        - name: "FLUENTD_MEMORY_LIMIT"
+          valueFrom:
+            resourceFieldRef:
+              containerName: "{{ daemonset_container_name }}"
+              resource: limits.memory
+        - name: "USE_MUX_CLIENT"
+          value: "{{ openshift_logging_use_mux_client | default('false') | lower }}"
       volumes:
       - name: runlogjournal
         hostPath:
@@ -121,3 +140,8 @@ spec:
       - name: dockerdaemoncfg
         hostPath:
           path: /etc/docker
+{% if openshift_logging_use_mux_client | bool %}
+      - name: muxcerts
+        secret:
+          secretName: logging-mux
+{% endif %}

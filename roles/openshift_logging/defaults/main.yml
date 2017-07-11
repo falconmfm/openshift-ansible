@@ -72,10 +72,11 @@ openshift_logging_fluentd_nodeselector: "{{ openshift_hosted_logging_fluentd_nod
 openshift_logging_fluentd_cpu_limit: 100m
 openshift_logging_fluentd_memory_limit: 512Mi
 openshift_logging_fluentd_es_copy: false
-openshift_logging_fluentd_use_journal: "{{ openshift_hosted_logging_use_journal if openshift_hosted_logging_use_journal is defined else (docker_log_driver == 'journald') | ternary(True, False) if docker_log_driver is defined else (openshift.docker.log_driver == 'journald') | ternary(True, False) if openshift.docker.log_driver is defined else openshift.docker.options | search('--log-driver=journald') if openshift.docker.options is defined else default(omit) }}"
 openshift_logging_fluentd_journal_source: "{{ openshift_hosted_logging_journal_source | default('') }}"
 openshift_logging_fluentd_journal_read_from_head: "{{ openshift_hosted_logging_journal_read_from_head | default('') }}"
 openshift_logging_fluentd_hosts: ['--all']
+openshift_logging_fluentd_buffer_queue_limit: 1024
+openshift_logging_fluentd_buffer_size_limit: 1m
 
 openshift_logging_es_host: logging-es
 openshift_logging_es_port: 9200
@@ -87,7 +88,7 @@ openshift_logging_es_cpu_limit: null
 # the logging appenders for the root loggers to write ES logs. Valid values: 'file', 'console'
 openshift_logging_es_log_appenders: ['file']
 openshift_logging_es_memory_limit: "{{ openshift_hosted_logging_elasticsearch_instance_ram | default('8Gi') }}"
-openshift_logging_es_pv_selector: null
+openshift_logging_es_pv_selector: "{{ openshift_hosted_logging_storage_labels | default('') }}"
 openshift_logging_es_pvc_dynamic: "{{ openshift_hosted_logging_elasticsearch_pvc_dynamic | default(False) }}"
 openshift_logging_es_pvc_size: "{{ openshift_hosted_logging_elasticsearch_pvc_size | default('') }}"
 openshift_logging_es_pvc_prefix: "{{ openshift_hosted_logging_elasticsearch_pvc_prefix | default('logging-es') }}"
@@ -126,7 +127,7 @@ openshift_logging_es_ops_client_key: /etc/fluent/keys/key
 openshift_logging_es_ops_cluster_size: "{{ openshift_hosted_logging_elasticsearch_ops_cluster_size | default(1) }}"
 openshift_logging_es_ops_cpu_limit: null
 openshift_logging_es_ops_memory_limit: "{{ openshift_hosted_logging_elasticsearch_ops_instance_ram | default('8Gi') }}"
-openshift_logging_es_ops_pv_selector: None
+openshift_logging_es_ops_pv_selector: "{{ openshift_hosted_loggingops_storage_labels | default('') }}"
 openshift_logging_es_ops_pvc_dynamic: "{{ openshift_hosted_logging_elasticsearch_ops_pvc_dynamic | default(False) }}"
 openshift_logging_es_ops_pvc_size: "{{ openshift_hosted_logging_elasticsearch_ops_pvc_size | default('') }}"
 openshift_logging_es_ops_pvc_prefix: "{{ openshift_hosted_logging_elasticsearch_ops_pvc_prefix | default('logging-es-ops') }}"
@@ -160,8 +161,13 @@ openshift_logging_use_mux: "{{ openshift_logging_mux_allow_external | default(Fa
 openshift_logging_use_mux_client: False
 openshift_logging_mux_hostname: "{{ 'mux.' ~ (openshift_master_default_subdomain | default('router.default.svc.cluster.local', true)) }}"
 openshift_logging_mux_port: 24284
-openshift_logging_mux_cpu_limit: 100m
-openshift_logging_mux_memory_limit: 512Mi
+openshift_logging_mux_cpu_limit: 500m
+openshift_logging_mux_memory_limit: 1Gi
+# the namespace to use for undefined projects should come first, followed by any
+# additional namespaces to create by default - users will typically not need to set this
+openshift_logging_mux_default_namespaces: ["mux-undefined"]
+# extra namespaces to create for mux clients - users will need to set this
+openshift_logging_mux_namespaces: []
 
 # following can be uncommented to provide values for configmaps -- take care when providing file contents as it may cause your cluster to not operate correctly
 #es_logging_contents:

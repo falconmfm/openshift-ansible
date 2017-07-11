@@ -21,7 +21,8 @@
             "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
             "TERM=xterm",
             "OPTS=$OPTS",
-            "PLAYBOOK_FILE=$PLAYBOOK_FILE"
+            "PLAYBOOK_FILE=$PLAYBOOK_FILE",
+            "ANSIBLE_CONFIG=$ANSIBLE_CONFIG"
         ],
         "cwd": "/opt/app-root/src/",
         "rlimits": [
@@ -102,7 +103,7 @@
         },
         {
             "type": "bind",
-            "source": "$SSH_ROOT",
+            "source": "$HOME_ROOT/.ssh",
             "destination": "/opt/app-root/src/.ssh",
             "options": [
                 "bind",
@@ -112,8 +113,8 @@
         },
         {
             "type": "bind",
-            "source": "$SSH_ROOT",
-            "destination": "/root/.ssh",
+            "source": "$HOME_ROOT",
+            "destination": "/root",
             "options": [
                 "bind",
                 "rw",
@@ -168,6 +169,16 @@
                 "bind",
                 "rw",
                 "mode=755"
+            ]
+        },
+        {
+            "destination": "/etc/resolv.conf",
+            "type": "bind",
+            "source": "/etc/resolv.conf",
+            "options": [
+                "ro",
+                "rbind",
+                "rprivate"
             ]
         },
         {

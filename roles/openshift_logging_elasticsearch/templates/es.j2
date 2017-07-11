@@ -58,6 +58,9 @@ spec:
               name: "cluster"
           env:
             -
+              name: "DC_NAME"
+              value: "{{deploy_name}}"
+            -
               name: "NAMESPACE"
               valueFrom:
                 fieldRef:
@@ -74,6 +77,9 @@ spec:
             -
               name: "INSTANCE_RAM"
               value: "{{openshift_logging_elasticsearch_memory_limit}}"
+            -
+              name: "HEAP_DUMP_LOCATION" 
+              value: "/elasticsearch/persistent/heapdump.hprof"
             -
               name: "NODE_QUORUM"
               value: "{{es_node_quorum | int}}"
@@ -100,13 +106,6 @@ spec:
               readOnly: true
             - name: elasticsearch-storage
               mountPath: /elasticsearch/persistent
-          readinessProbe:
-            exec:
-              command:
-              - "/usr/share/elasticsearch/probe/readiness.sh"
-            initialDelaySeconds: 5
-            timeoutSeconds: 4
-            periodSeconds: 5
       volumes:
         - name: elasticsearch
           secret:

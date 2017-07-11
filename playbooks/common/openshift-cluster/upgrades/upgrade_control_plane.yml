@@ -3,6 +3,16 @@
 # Upgrade Masters
 ###############################################################################
 
+# oc adm migrate storage should be run prior to etcd v3 upgrade
+# See: https://github.com/openshift/origin/pull/14625#issuecomment-308467060
+- name: Pre master upgrade - Upgrade all storage
+  hosts: oo_first_master
+  tasks:
+  - name: Upgrade all storage
+    command: >
+      {{ openshift.common.client_binary }} adm --config={{ openshift.common.config_base }}/master/admin.kubeconfig
+      migrate storage --include=* --confirm
+
 # If facts cache were for some reason deleted, this fact may not be set, and if not set
 # it will always default to true. This causes problems for the etcd data dir fact detection
 # so we must first make sure this is set correctly before attempting the backup.
@@ -107,8 +117,8 @@
     yedit:
       src: "{{ openshift.common.config_base }}/master/master-config.yaml"
       key: 'imageConfig.format'
-      value: "{{ oreg_url }}"
-    when: oreg_url is defined
+      value: "{{ oreg_url | default(oreg_url_master) }}"
+    when: oreg_url is defined or oreg_url_master is defined
 
   # Run the upgrade hook prior to restarting services/system if defined:
   - debug: msg="Running master upgrade hook {{ openshift_master_upgrade_hook }}"
@@ -132,6 +142,14 @@
 
   - set_fact:
       master_update_complete: True
+
+- name: Post master upgrade - Upgrade clusterpolicies storage
+  hosts: oo_first_master
+  tasks:
+  - name: Upgrade clusterpolicies storage
+    command: >
+      {{ openshift.common.client_binary }} adm --config={{ openshift.common.config_base }}/master/admin.kubeconfig
+      migrate storage --include=clusterpolicies --confirm
 
 ##############################################################################
 # Gate on master update complete
@@ -205,11 +223,17 @@
 
   - name: Reconcile Security Context Constraints
     command: >
-      {{ openshift.common.client_binary }} adm policy reconcile-sccs --confirm --additive-only=true -o name
+      {{ openshift.common.client_binary }} adm policy --config={{ openshift.common.config_base }}/master/admin.kubeconfig reconcile-sccs --confirm --additive-only=true -o name
     register: reconcile_scc_result
     changed_when:
     - reconcile_scc_result.stdout != ''
     - reconcile_scc_result.rc == 0
+    run_once: true
+
+  - name: Upgrade job storage
+    command: >
+      {{ openshift.common.client_binary }} adm --config={{ openshift.common.config_base }}/master/admin.kubeconfig
+      migrate storage --include=* --confirm
     run_once: true
 
   - set_fact:
@@ -247,8 +271,8 @@
   hosts: oo_masters_to_config:&oo_nodes_to_upgrade
   # This var must be set with -e on invocation, as it is not a per-host inventory var
   # and is evaluated early. Values such as "20%" can also be used.
-  serial: "{{ openshift_upgrade_nodes_serial | default(1) }}"
-  any_errors_fatal: true
+  serial: "{{ openshift_upgrade_control_plane_nodes_serial | default(1) }}"
+  max_fail_percentage: "{{ openshift_upgrade_control_plane_nodes_max_fail_percentage | default(0) }}"
 
   pre_tasks:
   - name: Load lib_openshift modules
@@ -277,6 +301,7 @@
   - lib_openshift
   - openshift_facts
   - docker
+  - openshift_node_dnsmasq
   - openshift_node_upgrade
 
   post_tasks:

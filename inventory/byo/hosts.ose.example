@@ -10,6 +10,10 @@ nfs
 
 # Set variables common for all OSEv3 hosts
 [OSEv3:vars]
+# Enable unsupported configurations, things that will yield a partially
+# functioning cluster but would not be supported for production use
+#openshift_enable_unsupported_configurations=false
+
 # SSH user, this user should allow ssh based auth without requiring a
 # password. If using ssh key based auth, then the key should be managed by an
 # ssh agent.
@@ -41,6 +45,17 @@ openshift_release=v3.6
 # WARNING: This value will be used for all hosts in RPM based environments, even those that have another version installed.
 # This could potentially trigger an upgrade and downtime, so be careful with modifying this value after the cluster is set up.
 #openshift_pkg_version=-3.6.0
+
+# This enables all the system containers except for docker:
+#openshift_use_system_containers=False
+#
+# But you can choose separately each component that must be a
+# system container:
+#
+#openshift_use_openvswitch_system_container=False
+#openshift_use_node_system_container=False
+#openshift_use_master_system_container=False
+#openshift_use_etcd_system_container=False
 
 # Install the openshift examples
 #openshift_install_examples=true
@@ -125,8 +140,11 @@ openshift_release=v3.6
 # Tasks to run after each master is upgraded and system/services have been restarted.
 # openshift_master_upgrade_post_hook=/usr/share/custom/post_master.yml
 
-
 # Alternate image format string, useful if you've got your own registry mirror
+# Configure this setting just on node or master
+#oreg_url_master=example.com/openshift3/ose-${component}:${version}
+#oreg_url_node=example.com/openshift3/ose-${component}:${version}
+# For setting the configuration globally
 #oreg_url=example.com/openshift3/ose-${component}:${version}
 # If oreg_url points to a registry other than registry.access.redhat.com we can
 # modify image streams to point at that registry by setting the following to true
@@ -186,6 +204,13 @@ openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 
 #openshift_master_request_header_ca=<ca text>
 # or
 #openshift_master_request_header_ca_file=<path to local ca file to use>
+
+# CloudForms Management Engine (ManageIQ) App Install
+#
+# Enables installation of MIQ server. Recommended for dedicated
+# clusters only. See roles/openshift_cfme/README.md for instructions
+# and requirements.
+#openshift_cfme_install_app=False
 
 # Cloud Provider Configuration
 #
@@ -325,8 +350,8 @@ openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 
 # router's default certificate.
 #openshift_hosted_router_certificate={"certfile": "/path/to/router.crt", "keyfile": "/path/to/router.key", "cafile": "/path/to/router-ca.crt"}
 #
-# Disable management of the OpenShift Router
-#openshift_hosted_manage_router=false
+# Manage the OpenShift Router (optional)
+#openshift_hosted_manage_router=true
 #
 # Router sharding support has been added and can be achieved by supplying the correct
 # data to the inventory.  The variable to house the data is openshift_hosted_routers
@@ -403,8 +428,8 @@ openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 
 # Validity of the auto-generated certificate in days (optional)
 #openshift_hosted_registry_cert_expire_days=730
 #
-# Disable management of the OpenShift Registry
-#openshift_hosted_manage_registry=false
+# Manage the OpenShift Registry (optional)
+#openshift_hosted_manage_registry=true
 
 # Registry Storage Options
 #
@@ -498,6 +523,7 @@ openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 
 #openshift_hosted_metrics_storage_nfs_options='*(rw,root_squash)'
 #openshift_hosted_metrics_storage_volume_name=metrics
 #openshift_hosted_metrics_storage_volume_size=10Gi
+#openshift_hosted_metrics_storage_labels={'storage': 'metrics'}
 #
 # Option B - External NFS Host
 # NFS volume must already exist with path "nfs_directory/_volume_name" on
@@ -509,6 +535,7 @@ openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 
 #openshift_hosted_metrics_storage_nfs_directory=/exports
 #openshift_hosted_metrics_storage_volume_name=metrics
 #openshift_hosted_metrics_storage_volume_size=10Gi
+#openshift_hosted_metrics_storage_labels={'storage': 'metrics'}
 #
 # Option C - Dynamic -- If openshift supports dynamic volume provisioning for
 # your cloud platform use this.
@@ -542,6 +569,7 @@ openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 
 #openshift_hosted_logging_storage_nfs_options='*(rw,root_squash)'
 #openshift_hosted_logging_storage_volume_name=logging
 #openshift_hosted_logging_storage_volume_size=10Gi
+#openshift_hosted_logging_storage_labels={'storage': 'logging'}
 #
 # Option B - External NFS Host
 # NFS volume must already exist with path "nfs_directory/_volume_name" on
@@ -553,6 +581,7 @@ openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 
 #openshift_hosted_logging_storage_nfs_directory=/exports
 #openshift_hosted_logging_storage_volume_name=logging
 #openshift_hosted_logging_storage_volume_size=10Gi
+#openshift_hosted_logging_storage_labels={'storage': 'logging'}
 #
 # Option C - Dynamic -- If openshift supports dynamic volume provisioning for
 # your cloud platform use this.
@@ -779,6 +808,12 @@ openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 
 
 # Enable API service auditing, available as of 3.2
 #openshift_master_audit_config={"enabled": true}
+#
+# In case you want more advanced setup for the auditlog you can
+# use this line.
+# The directory in "auditFilePath" will be created if it's not
+# exist
+#openshift_master_audit_config={"enabled": true, "auditFilePath": "/var/log/openpaas-oscp-audit/openpaas-oscp-audit.log", "maximumFileRetentionDays": 14, "maximumFileSizeMegabytes": 500, "maximumRetainedFiles": 5}
 
 # Validity of the auto-generated OpenShift certificates in days.
 # See also openshift_hosted_registry_cert_expire_days above.
@@ -791,6 +826,38 @@ openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 
 # Controls validity for etcd CA, peer, server and client certificates.
 #
 #etcd_ca_default_days=1825
+#
+# ServiceAccountConfig:LimitSecretRefences rejects pods that reference secrets their service accounts do not reference
+# openshift_master_saconfig_limitsecretreferences=false
+
+# Upgrade Control
+#
+# By default nodes are upgraded in a serial manner one at a time and all failures
+# are fatal, one set of variables for normal nodes, one set of variables for
+# nodes that are part of control plane as the number of hosts may be different
+# in those two groups.
+#openshift_upgrade_nodes_serial=1
+#openshift_upgrade_nodes_max_fail_percentage=0
+#openshift_upgrade_control_plane_nodes_serial=1
+#openshift_upgrade_control_plane_nodes_max_fail_percentage=0
+#
+# You can specify the number of nodes to upgrade at once. We do not currently
+# attempt to verify that you have capacity to drain this many nodes at once
+# so please be careful when specifying these values. You should also verify that
+# the expected number of nodes are all schedulable and ready before starting an
+# upgrade. If it's not possible to drain the requested nodes the upgrade will
+# stall indefinitely until the drain is successful.
+#
+# If you're upgrading more than one node at a time you can specify the maximum
+# percentage of failure within the batch before the upgrade is aborted. Any
+# nodes that do fail are ignored for the rest of the playbook run and you should
+# take care to investigate the failure and return the node to service so that
+# your cluster.
+#
+# The percentage must exceed the value, this would fail on two failures
+# openshift_upgrade_nodes_serial=4 openshift_upgrade_nodes_max_fail_percentage=49
+# where as this would not
+# openshift_upgrade_nodes_serial=4 openshift_upgrade_nodes_max_fail_percentage=50
 
 # host group for masters
 [masters]

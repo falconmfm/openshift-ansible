@@ -52,9 +52,12 @@ When both `openshift_logging_install_logging` and `openshift_logging_upgrade_log
 - `openshift_logging_fluentd_cpu_limit`: The CPU limit for Fluentd pods. Defaults to '100m'.
 - `openshift_logging_fluentd_memory_limit`: The memory limit for Fluentd pods. Defaults to '512Mi'.
 - `openshift_logging_fluentd_es_copy`: Whether or not to use the ES_COPY feature for Fluentd (DEPRECATED). Defaults to 'False'.
-- `openshift_logging_fluentd_use_journal`: NOTE: Fluentd will attempt to detect whether or not Docker is using the journald log driver when using the default of empty.
+- `openshift_logging_fluentd_use_journal`: *DEPRECATED - DO NOT USE* Fluentd will automatically detect whether or not Docker is using the journald log driver.
 - `openshift_logging_fluentd_journal_read_from_head`: If empty, Fluentd will use its internal default, which is false.
 - `openshift_logging_fluentd_hosts`: List of nodes that should be labeled for Fluentd to be deployed to. Defaults to ['--all'].
+- `openshift_logging_fluentd_buffer_queue_limit`: Buffer queue limit for Fluentd. Defaults to 1024.
+- `openshift_logging_fluentd_buffer_size_limit`: Buffer chunk limit for Fluentd. Defaults to 1m.
+
 
 - `openshift_logging_es_host`: The name of the ES service Fluentd should send logs to. Defaults to 'logging-es'.
 - `openshift_logging_es_port`: The port for the ES service Fluentd should sent its logs to. Defaults to '9200'.
@@ -124,3 +127,36 @@ Elasticsearch OPS too, if using an OPS cluster:
 - `openshift_logging_es_ops_ca_ext`: The location of the CA cert for the cert
   Elasticsearch uses for the external TLS server cert (default is the internal
   CA)
+
+### mux - secure_forward listener service
+- `openshift_logging_use_mux`: Default `False`.  If this is `True`, a service
+  called `mux` will be deployed.  This service will act as a Fluentd
+  secure_forward forwarder for the node agent Fluentd daemonsets running in the
+  cluster.  This can be used to reduce the number of connections to the
+  OpenShift API server, by using `mux` and configuring each node Fluentd to
+  send raw logs to mux and turn off the k8s metadata plugin.
+- `openshift_logging_mux_allow_external`: Default `False`.  If this is `True`,
+  the `mux` service will be deployed, and it will be configured to allow
+  Fluentd clients running outside of the cluster to send logs using
+  secure_forward.  This allows OpenShift logging to be used as a central
+  logging service for clients other than OpenShift, or other OpenShift
+  clusters.
+- `openshift_logging_use_mux_client`: Default `False`.  If this is `True`, the
+  node agent Fluentd services will be configured to send logs to the mux
+  service rather than directly to Elasticsearch.
+- `openshift_logging_mux_hostname`: Default is "mux." +
+  `openshift_master_default_subdomain`.  This is the hostname *external*_
+  clients will use to connect to mux, and will be used in the TLS server cert
+  subject.
+- `openshift_logging_mux_port`: 24284
+- `openshift_logging_mux_cpu_limit`: 100m
+- `openshift_logging_mux_memory_limit`: 512Mi
+- `openshift_logging_mux_default_namespaces`: Default `["mux-undefined"]` - the
+ first value in the list is the namespace to use for undefined projects,
+ followed by any additional namespaces to create by default - users will
+ typically not need to set this
+- `openshift_logging_mux_namespaces`: Default `[]` - additional namespaces to
+  create for _external_ mux clients to associate with their logs - users will
+  need to set this
+- `openshift_logging_mux_buffer_queue_limit`: Default `[1024]` - Buffer queue limit for Mux.
+- `openshift_logging_mux_buffer_size_limit`: Default `[1m]` - Buffer chunk limit for Mux.

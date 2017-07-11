@@ -5,7 +5,8 @@
         "VAR_LIB_OPENSHIFT_INSTALLER" : "/var/lib/openshift-installer",
         "VAR_LOG_OPENSHIFT_LOG": "/var/log/ansible.log",
         "PLAYBOOK_FILE": "/usr/share/ansible/openshift-ansible/playbooks/byo/config.yml",
-        "SSH_ROOT": "/root/.ssh",
+	"HOME_ROOT": "/root",
+	"ANSIBLE_CONFIG": "/usr/share/atomic-openshift-utils/ansible.cfg",
         "INVENTORY_FILE": "/dev/null"
     }
 }

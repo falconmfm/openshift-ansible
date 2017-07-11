@@ -89,8 +89,6 @@ spec:
           value: "{{openshift_logging_mux_ops_client_key}}"
         - name: "OPS_CA"
           value: "{{openshift_logging_mux_ops_ca}}"
-        - name: "USE_JOURNAL"
-          value: "false"
         - name: "JOURNAL_SOURCE"
           value: "{{openshift_logging_mux_journal_source | default('')}}"
         - name: "JOURNAL_READ_FROM_HEAD"
@@ -102,14 +100,28 @@ spec:
         - name: USE_MUX
           value: "true"
         - name: MUX_ALLOW_EXTERNAL
-          value: "{{ openshift_logging_mux_allow_external | default('false') }}"
+          value: "{{ openshift_logging_mux_allow_external | default('false') | lower }}"
+        - name: "BUFFER_QUEUE_LIMIT"
+          value: "{{ openshift_logging_mux_buffer_queue_limit }}"
+        - name: "BUFFER_SIZE_LIMIT"
+          value: "{{ openshift_logging_mux_buffer_size_limit }}"
+        - name: "MUX_CPU_LIMIT"
+          valueFrom:
+            resourceFieldRef:
+              containerName: "mux"
+              resource: limits.cpu
+        - name: "MUX_MEMORY_LIMIT"
+          valueFrom:
+            resourceFieldRef:
+              containerName: "mux"
+              resource: limits.memory
       volumes:
       - name: config
         configMap:
           name: logging-mux
       - name: certs
         secret:
-          secretName: logging-mux
+          secretName: logging-fluentd
       - name: dockerhostname
         hostPath:
           path: /etc/hostname

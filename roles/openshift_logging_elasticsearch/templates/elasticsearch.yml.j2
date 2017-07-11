@@ -14,8 +14,10 @@ index:
     flush_threshold_period: 5m
 
 node:
+  name: ${DC_NAME}
   master: ${IS_MASTER}
   data: ${HAS_DATA}
+  max_local_storage_nodes: 1
 
 network:
   host: 0.0.0.0
@@ -38,6 +40,7 @@ gateway:
 io.fabric8.elasticsearch.authentication.users: ["system.logging.kibana", "system.logging.fluentd", "system.logging.curator", "system.admin"]
 io.fabric8.elasticsearch.kibana.mapping.app: /usr/share/elasticsearch/index_patterns/com.redhat.viaq-openshift.index-pattern.json
 io.fabric8.elasticsearch.kibana.mapping.ops: /usr/share/elasticsearch/index_patterns/com.redhat.viaq-openshift.index-pattern.json
+io.fabric8.elasticsearch.kibana.mapping.empty: /usr/share/elasticsearch/index_patterns/com.redhat.viaq-openshift.index-pattern.json
 
 openshift.config:
   use_common_data_model: true
@@ -59,7 +62,7 @@ path:
 searchguard:
   authcz.admin_dn:
   - CN=system.admin,OU=OpenShift,O=Logging
-  config_index_name: ".searchguard.${HOSTNAME}"
+  config_index_name: ".searchguard.${DC_NAME}"
   ssl:
     transport:
       enabled: true

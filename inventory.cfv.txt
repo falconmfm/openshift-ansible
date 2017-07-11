@@ -1,0 +1,44 @@
+[masters]
+vmclhubm01.cfv.junta-andalucia.es openshift_schedulable=true
+
+[etcd]
+vmclhubetcd01.cfv.junta-andalucia.es openshift_schedulable=true
+
+[nodes]
+vmclhubnode01.cfv.junta-andalucia.es openshift_schedulable=true
+vmclhubnode02.cfv.junta-andalucia.es openshift_schedulable=true
+
+
+[OSEv3:children]
+masters
+nodes
+etcd
+
+[OSEv3:vars]
+ansible_ssh_user=mfalcon
+openshift_release=v1.5
+deployment_type=origin
+openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
+openshift_master_htpasswd_users={'admin': '$apr1$cUqTfKHg$Au22L0kYAJj.n5Unzmd1P1', 'user': '$apr1$08MWtIVL$jeYSM.H8MXeCQ6eLe41u20'}
+containerized=true
+enable_docker_excluder=false
+enable_openshift_excluder=false
+openshift_release=1.5
+openshift_image_tag=v1.5.0
+openshift_install_examples=true
+openshift_public_hostname=hub.cfv.junta-andalucia.es
+openshift_master_default_subdomain=des.hub.cfv.junta-andalucia.es
+openshift_hosted_metrics_deploy=false
+
+openshift_http_proxy=http://proxy.cfv.junta-andalucia.es:3128
+openshift_https_proxy=http://proxy.cfv.junta-andalucia.es:3128
+openshift_no_proxy='.cfv.junta-andalucia.es'
+openshift_builddefaults_http_proxy=http://10.229.201.230:3128
+openshift_builddefaults_https_proxy=http://10.229.201.230:3128
+
+
+
+[all:vars]
+ansible_connection=ssh
+ansible_ssh_user=mfalcon
+http_proxy='http://proxy.{{ ansible_domain }}:3128'
